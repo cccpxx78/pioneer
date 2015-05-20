@@ -569,6 +569,9 @@ Ship.Refuel = function (self,amount)
 	return removed
 end
 
+Ship.SetScanner = function (self,amount)
+	self:SetScannerPercent(amount)
+end
 
 --
 -- Method: Jettison

@@ -801,6 +801,7 @@ end
 
 function sensor.bodyscanner:DoCallBack()
 	if self.callback then self.callback(self.progress, self.state) end
+	Game.player:SetScanner(self.progress)
 end
 
 function sensor.bodyscanner:GetLastResults()

@@ -237,6 +237,8 @@ public:
 	void SetFuel(const double f);
 	double GetFuelReserve() const { return m_reserveFuel; }
 	void SetFuelReserve(const double f) { m_reserveFuel = Clamp(f, 0.0, 1.0); }
+	double GetScanner() const { return m_scanner;	}
+	void SetScanner(const double f);
 
 	// available delta-V given the ship's current fuel state
 	double GetSpeedReachedWithFuel() const;
@@ -347,6 +349,7 @@ private:
 
 	double m_thrusterFuel; 	// remaining fuel 0.0-1.0
 	double m_reserveFuel;	// 0-1, fuel not to touch for the current AI program
+	double m_scanner;
 
 	double m_landingMinOffset;	// offset from the centre of the ship used during docking
 

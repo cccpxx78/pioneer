@@ -391,6 +391,12 @@ void Ship::SetFuel(const double f)
 	Properties().Set("fuel", m_thrusterFuel*100); // XXX to match SetFuelPercent
 }
 
+void Ship::SetScanner(const double f)
+{
+	m_scanner = Clamp(f, 0.0, 1.0);
+	Properties().Set("scanner", m_scanner*100); // XXX to match SetScannerPercent
+}
+
 // returns speed that can be reached using fuel minus reserve according to the Tsiolkovsky equation
 double Ship::GetSpeedReachedWithFuel() const
 {
