@@ -6,8 +6,9 @@ local Game = import_core("Game")
 local Serializer = import("Serializer")
 local Lang = import("Lang")
 local ShipDef = import("ShipDef")
+local Timer = import("Timer")
+local Space = import_core("Space")
 
---
 -- Class: EquipType
 --
 -- A container for a ship's equipment.
@@ -52,7 +53,9 @@ function EquipType:Serialize()
 	local tmp = EquipType.Super().Serialize(self)
 	local ret = {}
 	for k,v in pairs(tmp) do
-		ret[k] = v
+		if type(v) ~= "function" then
+			ret[k] = v
+		end
 	end
 	ret.volatile = nil
 	return ret
@@ -287,6 +290,69 @@ HyperdriveType.OnEnterHyperspace = function (self, ship)
 		end
 		ship:unsetprop('nextJumpFuelUse')
 	end
+end
+
+local SensorType = utils.inherits(EquipType, "SensorType")
+
+function SensorType:BeginAcquisition(callback)
+	self:ClearAcquisition()
+	self.callback = callback
+	if self:OnBeginAcquisition() then
+		self.state = "RUNNING"
+		self.stop_timer = false
+		Timer:CallEvery(1, function()
+			if self.stop_timer == true then
+				return true
+			end
+			if self:IsScanning() then
+				self:OnProgress()
+				if self:IsScanning() then
+					self.stop_timer = false
+				end
+			elseif self.state == "PAUSED" then
+				self.stop_timer = false
+			elseif self.state == "DONE" then
+				self.stop_timer = true
+			end
+			self:DoCallBack()
+			return self.stop_timer
+		end)
+	end
+	self:DoCallBack()
+end
+
+function SensorType:PauseAcquisition()
+	if self:IsScanning() then
+		self.state = "PAUSED"
+	end
+	self:DoCallBack()
+end
+
+function SensorType:UnPauseAcquisition()
+	if self.state == "PAUSED" then
+		self.state = "RUNNING"
+	end
+	self:DoCallBack()
+end
+
+function SensorType:ClearAcquisition()
+	self:OnClear()
+	self.state = "HALTED"
+	self.stop_timer = true
+	self:DoCallBack()
+	self.callback = nil
+end
+
+function SensorType:GetLastResults()
+	return self.progress
+end
+
+function SensorType:IsScanning()
+	return self.state == "RUNNING" or self.state == "HALTED"
+end
+
+function SensorType:DoCallBack()
+	if self.callback then self.callback(self.progress, self.state) end
 end
 
 -- Constants: EquipSlot
@@ -599,6 +665,49 @@ misc.trade_analyzer = EquipType.New({
 	l10n_key="TRADE_ANALYZER", slots="trade_analyzer", price=400,
 	capabilities={mass=0, trade_analyzer=1}, purchasable=true
 })
+misc.bodyscanner = SensorType.New({
+	l10n_key = 'BODYSCANNER', slots="sensor", price=1,
+	capabilities={mass=1}, purchasable=true,
+	max_range=100000000, target_altitude=0, state="HALTED", progress=0,
+	OnBeginAcquisition = function(self)
+		local closest_planet = Game.player:FindNearestTo("PLANET")
+		if closest_planet then
+			local altitude = self:DistanceToSurface(closest_planet)
+			if altitude < self.max_range then
+				self.target_altitude = altitude
+				self.target_body_path = closest_planet.path
+				return true
+			end
+		end
+		return false
+	end,
+	OnProgress = function(self)
+		local target_body = Space.GetBody(self.target_body_path.bodyIndex)
+		if target_body and target_body:exists() then
+			local altitude = self:DistanceToSurface(target_body)
+			local distance_diff = math.abs(altitude - self.target_altitude)
+			if distance_diff/self.target_altitude <= 0.05 then -- percentual difference
+				self.state = "RUNNING" -- possebly back in range: HALTED -> RUNNING
+				self.progress = self.progress + 3
+				if self.progress > 100 then
+					self.state = "DONE"
+					self.progress = {body=target_body.path, altitude=self.target_altitude}
+				end
+			else -- strayed out off range
+				self.state = "HALTED"
+			end
+		else -- we lost the target body
+			self:ClearAcquisition()
+		end
+	end,
+	OnClear = function(self)
+		self.target_altitude = 0
+		self.progress = 0
+	end,
+	DistanceToSurface = function(self, body)
+		return  select(3,Game.player:GetGroundPosition(body)) -- altitude
+	end
+})
 
 local hyperspace = {}
 hyperspace.hyperdrive_1 = HyperdriveType.New({
@@ -733,6 +842,7 @@ local equipment = {
 	LaserType=LaserType,
 	HyperdriveType=HyperdriveType,
 	EquipType=EquipType,
+	SensorType=SensorType
 }
 
 local serialize = function()
@@ -760,5 +870,6 @@ Serializer:Register("Equipment", serialize, unserialize)
 Serializer:RegisterClass("LaserType", LaserType)
 Serializer:RegisterClass("EquipType", EquipType)
 Serializer:RegisterClass("HyperdriveType", HyperdriveType)
+Serializer:RegisterClass("SensorType", SensorType)
 
 return equipment
