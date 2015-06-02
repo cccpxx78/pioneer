@@ -8,6 +8,7 @@ local Lang = import("Lang")
 local ShipDef = import("ShipDef")
 local Timer = import("Timer")
 local Space = import_core("Space")
+local Comms = import("Comms")
 
 -- Class: EquipType
 --
@@ -301,6 +302,8 @@ function SensorType:BeginAcquisition(callback)
 		self.state = "RUNNING"
 		self.stop_timer = false
 		Timer:CallEvery(1, function()
+			-- if new BeginAcquisition before timer tick gets here
+			-- the previous timer is left running because self.stop_timer != true
 			if self.stop_timer == true then
 				return true
 			end
@@ -337,7 +340,7 @@ end
 
 function SensorType:ClearAcquisition()
 	self:OnClear()
-	self.state = "HALTED"
+	self.state = "DONE"
 	self.stop_timer = true
 	self:DoCallBack()
 	self.callback = nil
@@ -667,8 +670,10 @@ misc.trade_analyzer = EquipType.New({
 })
 misc.bodyscanner = SensorType.New({
 	l10n_key = 'BODYSCANNER', slots="sensor", price=1,
-	capabilities={mass=1}, purchasable=true,
+	capabilities={mass=1,bodyscanner=1}, purchasable=true,
+	icon_on_name="body_scanner_on", icon_off_name="body_scanner_off",
 	max_range=100000000, target_altitude=0, state="HALTED", progress=0,
+	-- TODO after unserialize these functions are gone?
 	OnBeginAcquisition = function(self)
 		local closest_planet = Game.player:FindNearestTo("PLANET")
 		if closest_planet then
@@ -676,24 +681,34 @@ misc.bodyscanner = SensorType.New({
 			if altitude < self.max_range then
 				self.target_altitude = altitude
 				self.target_body_path = closest_planet.path
+				local l = Lang.GetResource(self.l10n_resource)
+				Comms.Message(l.STARTING_SCAN.." "..self.target_altitude)
 				return true
 			end
 		end
 		return false
 	end,
 	OnProgress = function(self)
+		local l = Lang.GetResource(self.l10n_resource)
 		local target_body = Space.GetBody(self.target_body_path.bodyIndex)
 		if target_body and target_body:exists() then
 			local altitude = self:DistanceToSurface(target_body)
 			local distance_diff = math.abs(altitude - self.target_altitude)
 			if distance_diff/self.target_altitude <= 0.05 then -- percentual difference
-				self.state = "RUNNING" -- possebly back in range: HALTED -> RUNNING
+				if self.state == "HALTED" then
+					Comms.Message(l.SCAN_RESUMED)
+					self.state = "RUNNING"
+				end
 				self.progress = self.progress + 3
 				if self.progress > 100 then
 					self.state = "DONE"
 					self.progress = {body=target_body.path, altitude=self.target_altitude}
+					Comms.Message(l.SCAN_COMPLETED)
 				end
 			else -- strayed out off range
+				if self.state == "RUNNING" then
+					Comms.Message(l.OUT_OF_SCANRANGE.." "..self.target_altitude)
+				end
 				self.state = "HALTED"
 			end
 		else -- we lost the target body

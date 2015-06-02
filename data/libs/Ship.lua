@@ -10,6 +10,7 @@ local ShipDef = import("ShipDef")
 local Equipment = import("Equipment")
 local Timer = import("Timer")
 local Lang = import("Lang")
+local Comms = import("Comms")
 
 local l = Lang.GetResource("ui-core")
 
@@ -533,6 +534,34 @@ function Ship:FireMissileAt(which_missile, target)
 	return missile_object
 end
 
+-- Method: OnScannerState
+--
+-- Parameters:
+-- TODO pass in index from ShipCpanelMultiFuncDisplays.cpp
+-- UseEquipWidget::ToggleScanner
+--
+--   state - true is scanner is activated, false if deactivated
+--
+-- Availability:
+--
+--   alpha ?? TODO
+--
+-- Status:
+--
+--   experimental
+--
+function Ship:OnScannerState(buttonstate)
+	for i,m in pairs(self:GetEquip("sensor")) do --TODO index
+		if buttonstate == 1 then
+			m:BeginAcquisition(function(progress, state)
+				self:SetScannerPercent(progress) -- TODO index
+			end)
+		else
+			m:ClearAcquisition()
+		end
+	end
+end
+
 --
 -- Method: Refuel
 --
@@ -568,7 +597,6 @@ Ship.Refuel = function (self,amount)
 	self:SetFuelPercent(math.clamp(self.fuel + removed * 100 / fuelTankMass, 0, 100))
 	return removed
 end
-
 
 --
 -- Method: Jettison

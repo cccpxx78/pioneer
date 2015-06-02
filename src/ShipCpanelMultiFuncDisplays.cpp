@@ -522,6 +522,11 @@ void UseEquipWidget::FireMissile(int idx)
 	LuaObject<Ship>::CallMethod(Pi::player, "FireMissileAt", idx+1, static_cast<Ship*>(Pi::player->GetCombatTarget()));
 }
 
+void UseEquipWidget::ToggleScanner(Gui::MultiStateImageButton *b)
+{
+	LuaObject<Ship>::CallMethod(Pi::player, "OnScannerState", b->GetState());
+}
+
 static void FireECM()
 {
 	Pi::player->UseECM();
@@ -566,6 +571,31 @@ void UseEquipWidget::UpdateEquip()
 			Add(b, 32, 0);
 		}
 	}
+	
+	LuaObject<Ship>::CallMethod<LuaRef>(Pi::player, "GetEquip", "sensor").PushCopyToStack();
+	int numSensorSlots = LuaObject<Ship>::CallMethod<int>(Pi::player, "GetEquipSlotCapacity", "sensor");
+		if (numSensorSlots) {
+		float spacing = 40.0f ; // TODO calculate properly using numSensorSlots;
+		lua_pushnil(l);
+		while(lua_next(l, -2)) {
+			if (lua_type(l, -2) == LUA_TNUMBER) {
+				int i = lua_tointeger(l, -2);
+				LuaTable sensor(l, -1);
+				Gui::MultiStateImageButton *b = new Gui::MultiStateImageButton();
+				b->SetShortcut(SDLK_F6, KMOD_NONE);
+				b->AddState(0, (std::string("icons/")+sensor.Get<std::string>("icon_off_name", "")+".png").c_str());
+				b->AddState(1, (std::string("icons/")+sensor.Get<std::string>("icon_on_name", "")+".png").c_str());
+				b->SetToolTip(sensor.CallMethod<std::string>("GetName"));
+				// TODO pass in index
+				//b->onClick.connect(sigc::bind(sigc::mem_fun(this, &UseEquipWidget::ToggleScanner), i-1));
+				b->onClick.connect(sigc::mem_fun(this, &UseEquipWidget::ToggleScanner));
+				b->SetRenderDimensions(30.0f, 22.0f);
+				Add(b, spacing*i, 38.0f);
+			}
+			lua_pop(l, 1);
+		}
+	}
+
 
 }
 

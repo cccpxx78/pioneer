@@ -197,6 +197,28 @@ static int l_ship_set_fuel_percent(lua_State *l)
 	return 0;
 }
 
+static int l_ship_set_scanner_percent(lua_State *l)
+{
+	LUA_DEBUG_START(l);
+	Ship *s = LuaObject<Ship>::CheckFromLua(1);
+
+	float percent = 100;
+	if (lua_isnumber(l, 2)) {
+		percent = float(luaL_checknumber(l, 2));
+		if (percent < 0.0f || percent > 100.0f) {
+			pi_lua_warn(l,
+				"argument out of range: Ship{%s}:SetScannerPercent(%g)",
+				s->GetLabel().c_str(), percent);
+		}
+	}
+
+	s->SetScanner(percent/100.f);
+
+	LUA_DEBUG_END(l, 0);
+
+	return 0;
+}
+
 /*
  * Method: Explode
  *
@@ -929,6 +951,7 @@ template <> void LuaObject<Ship>::RegisterClass()
 		{ "SetShipType", l_ship_set_type },
 		{ "SetHullPercent", l_ship_set_hull_percent },
 		{ "SetFuelPercent", l_ship_set_fuel_percent },
+		{ "SetScannerPercent", l_ship_set_scanner_percent },
 
 		{ "GetSkin",    l_ship_get_skin    },
 		{ "SetSkin",    l_ship_set_skin    },

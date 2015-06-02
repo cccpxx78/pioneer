@@ -101,6 +101,8 @@ private:
 	sigc::connection m_onPlayerEquipChangedCon;
 
 	void FireMissile(int idx);
+	
+	void ToggleScanner(Gui::MultiStateImageButton *b);
 };
 
 class MultiFuncSelectorWidget: public Gui::Fixed {

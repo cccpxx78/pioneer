@@ -222,9 +222,11 @@ void WorldView::InitObject()
 	m_hudHullIntegrity = new Gui::MeterBar(100.0f, Lang::HULL_INTEGRITY, Color(255,255,0,204));
 	m_hudShieldIntegrity = new Gui::MeterBar(100.0f, Lang::SHIELD_INTEGRITY, Color(255,255,0,204));
 	m_hudFuelGauge = new Gui::MeterBar(100.f, Lang::FUEL, Color(255, 255, 0, 204));
+	m_hudScannerGauge = new Gui::MeterBar(100.f, Lang::SCANNER, Color(255, 255, 0, 204));
 	Add(m_hudFuelGauge, 5.0f, Gui::Screen::GetHeight() - 104.0f);
 	Add(m_hudHullTemp, 5.0f, Gui::Screen::GetHeight() - 144.0f);
 	Add(m_hudWeaponTemp, 5.0f, Gui::Screen::GetHeight() - 184.0f);
+	Add(m_hudScannerGauge, 5.0f, 5.0f);
 	Add(m_hudHullIntegrity, Gui::Screen::GetWidth() - 105.0f, Gui::Screen::GetHeight() - 104.0f);
 	Add(m_hudShieldIntegrity, Gui::Screen::GetWidth() - 105.0f, Gui::Screen::GetHeight() - 144.0f);
 
@@ -845,6 +847,20 @@ void WorldView::RefreshButtonStateAndVisibility()
 		}
 
 		m_hudFuelGauge->SetValue(Pi::player->GetFuel());
+
+		int hasBodyscanner = 0;
+		Pi::player->Properties().Get("bodyscanner_cap", hasBodyscanner);
+		if (hasBodyscanner) {
+			m_hudScannerGauge->SetValue(Pi::player->GetScanner());
+			if (Pi::player->GetScanner() > 0.01) {
+				m_hudScannerGauge->Show();
+			} else {
+				m_hudScannerGauge->Hide();
+			}
+		}
+		else {
+			m_hudScannerGauge->Hide();
+		}
 	}
 
 	const float activeWeaponTemp = Pi::player->GetGunTemperature(GetActiveWeapon());

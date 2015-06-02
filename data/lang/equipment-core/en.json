@@ -262,5 +262,21 @@
    "BODYSCANNER_DESCRIPTION" : {
       "description" : "",
       "message" : "Scan nearest body for resources."
+   },
+   "STARTING_SCAN" : {
+      "description" : "",
+      "message" : "Starting scan, target distance is"
+   },
+   "OUT_OF_SCANRANGE" : {
+      "description" : "",
+      "message" : "Max scan range exceeded:"
+   },
+   "SCAN_COMPLETED" : {
+      "description" : "",
+      "message" : "Scanning completed"
+   },
+   "SCAN_RESUMED" : {
+      "description" : "",
+      "message" : "Scanning resumed"
    }
 }
