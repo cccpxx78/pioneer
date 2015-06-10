@@ -54,9 +54,7 @@ function EquipType:Serialize()
 	local tmp = EquipType.Super().Serialize(self)
 	local ret = {}
 	for k,v in pairs(tmp) do
-		if type(v) ~= "function" then
 			ret[k] = v
-		end
 	end
 	ret.volatile = nil
 	return ret
@@ -673,7 +671,6 @@ misc.bodyscanner = SensorType.New({
 	capabilities={mass=1,bodyscanner=1}, purchasable=true,
 	icon_on_name="body_scanner_on", icon_off_name="body_scanner_off",
 	max_range=100000000, target_altitude=0, state="HALTED", progress=0,
-	-- TODO after unserialize these functions are gone?
 	OnBeginAcquisition = function(self)
 		local closest_planet = Game.player:FindNearestTo("PLANET")
 		if closest_planet then
@@ -723,6 +720,28 @@ misc.bodyscanner = SensorType.New({
 		return  select(3,Game.player:GetGroundPosition(body)) -- altitude
 	end
 })
+
+function SensorType:Serialize()
+	local tmp = SensorType.Super().Serialize(self)
+	local ret = {}
+	for k,v in pairs(tmp) do
+		if type(v) ~= "function" then
+			ret[k] = v
+		end
+	end
+	ret.volatile = nil
+	return ret
+end
+
+function SensorType.Unserialize(data)
+	obj = SensorType.Super().Unserialize(data)
+	setmetatable(obj, SensorType.meta)
+	obj.OnClear = misc.bodyscanner.OnClear
+	obj.OnProgress = misc.bodyscanner.OnProgress
+	obj.OnBeginAcquisition = misc.bodyscanner.OnBeginAcquisition
+	obj.DistanceToSurface = misc.bodyscanner.DistanceToSurface
+	return obj
+end
 
 local hyperspace = {}
 hyperspace.hyperdrive_1 = HyperdriveType.New({
